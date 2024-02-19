@@ -1,2 +1,4 @@
-# hevo_klipper_config
-Backup for my Hypercube Evolution Printer running Klipper
+# klipper-backup 💾 
+Klipper backup script for manual or automated GitHub backups 
+
+This backup is provided by [klipper-backup](https://github.com/Staubgeborener/klipper-backup).
