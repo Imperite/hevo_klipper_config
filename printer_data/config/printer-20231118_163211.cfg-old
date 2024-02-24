@@ -27,6 +27,15 @@ max_z_accel: 100
  shaper_freq_y: 25.81
  shaper_type: mzv
 
+
+#####################################################################
+# Other Config Files
+#####################################################################
+# [inlcude motion.cfg]
+
+[include macros.cfg]
+
+
 #####################################################################
 # Steppers/Motion
 #####################################################################
@@ -129,16 +138,14 @@ sensor_type: ATC Semitec 104GT-2
 min_temp: 0
 min_extrude_temp: 180
 max_temp: 250
-pressure_advance:0.0625
-# endstop_pin: tmc2209_extruder:virtual_endstop
 
+pressure_advance:0.0625
 
 [tmc2209 extruder]
 uart_pin: PD4
 diag_pin: ^PE15
 run_current: 0.600
 stealthchop_threshold: 999999
-# driver_SGTHRS: 100
 
 #TODO: use ENDSTOP_PHASE_CALIBRATE STEPPER=stepper_z to calibrate
 [endstop_phase]
@@ -149,27 +156,17 @@ enable_force_move: True
 [gcode_arcs]
 
 #####################################################################
-# Other Config Files
-#####################################################################
-# [inlcude motion.cfg]
-
-[include macros.cfg]
-[include mmu/base/*.cfg]
-[include mmu/optional/client_macros.cfg]
-#[include mmu/optional/mmu_menu.cfg]
-
-#####################################################################
 # Fans
 #####################################################################
 [fan]
-pin: PE6
+pin: PC8
 
 [heater_fan extruder_fan]
 pin: PE5
 heater_temp: 50
 
 [fan_generic ventilation]
-pin: PC8
+pin: PE6
 
 # [temperature_fan system_fan]
 # pin: host:gpio18 # the fan control pin (must be a mosfet or a pwm fan)
@@ -300,7 +297,7 @@ gcode:
 # Misc
 #####################################################################
 [filament_switch_sensor extruder1]
-  switch_pin: !PE15
+  switch_pin: !PE10
   
 
 [firmware_retraction]
@@ -415,7 +412,7 @@ aliases:
 #*# max_y = 209.98
 #*#
 #*# [probe]
-#*# z_offset = 0.655
+#*# z_offset = 0.255
 #*#
 #*# [extruder]
 #*# control = pid
