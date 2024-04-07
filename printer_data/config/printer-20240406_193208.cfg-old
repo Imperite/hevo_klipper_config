@@ -27,13 +27,15 @@ max_z_accel: 100
  shaper_freq_y: 25.81
  shaper_type: mzv
 
-
-#####################################################################
+ #####################################################################
 # Other Config Files
 #####################################################################
 # [inlcude motion.cfg]
-
+[include KAMP_Settings.cfg]
 [include macros.cfg]
+# [include mmu/base/*.cfg]
+# [include mmu/optional/client_macros.cfg]
+#[include mmu/optional/mmu_menu.cfg]
 
 
 #####################################################################
@@ -45,12 +47,12 @@ dir_pin: !PF1
 enable_pin: !PF2
 endstop_pin: tmc2209_stepper_x:virtual_endstop
 homing_retract_dist: 0
-microsteps: 128
+microsteps: 256
 rotation_distance: 40
 full_steps_per_rotation: 200
 position_endstop: -24
 position_min: -24
-position_max: 210
+position_max: 200
 homing_speed: 40
 
 [tmc2209 stepper_x]         #DUMP_TMC comm can debug and help with config
@@ -66,12 +68,12 @@ dir_pin: !PE8
 enable_pin: !PD7
 endstop_pin: tmc2209_stepper_y:virtual_endstop
 homing_retract_dist: 0
-microsteps: 128
+microsteps: 256
 rotation_distance: 40
 full_steps_per_rotation: 200
 position_endstop: -43
 position_min: -43
-position_max: 230
+position_max: 220
 homing_speed: 15
 
 [tmc2209 stepper_y]         #DUMP_TMC comm can debug and help with config
@@ -122,12 +124,12 @@ dir_pin: !PA0
 enable_pin: !PC3
 microsteps: 16
 gear_ratio: 50:17
-rotation_distance: 22.172
+rotation_distance: 23.35
 full_steps_per_rotation: 200
 nozzle_diameter: 0.400
 filament_diameter: 1.750
 max_extrude_cross_section: 50.0
-max_extrude_only_distance: 101.0
+max_extrude_only_distance: 1001.0
 heater_pin: PB1 # Heat0
 sensor_pin:  PF4 # T1 Header
 sensor_type: ATC Semitec 104GT-2
@@ -137,18 +139,17 @@ sensor_type: ATC Semitec 104GT-2
 #pid_Kd=157.594
 min_temp: 0
 min_extrude_temp: 180
-max_temp: 250
-
+max_temp: 300
 pressure_advance:0.0625
+# endstop_pin: tmc2209_extruder:virtual_endstop
+
 
 [tmc2209 extruder]
 uart_pin: PD4
 diag_pin: ^PE15
 run_current: 0.600
 stealthchop_threshold: 999999
-
-#TODO: use ENDSTOP_PHASE_CALIBRATE STEPPER=stepper_z to calibrate
-[endstop_phase]
+# driver_SGTHRS: 100
 
 [force_move]
 enable_force_move: True
@@ -159,24 +160,28 @@ enable_force_move: True
 # Fans
 #####################################################################
 [fan]
-pin: PC8
+pin: PE6
 
 [heater_fan extruder_fan]
 pin: PE5
 heater_temp: 50
 
 [fan_generic ventilation]
-pin: PE6
+pin: PC8
 
-# [temperature_fan system_fan]
-# pin: host:gpio18 # the fan control pin (must be a mosfet or a pwm fan)
-# control: watermark # the type of hysteresis we are using
-# max_delta: 3.0 # fan turns on/off at 3° over/under target_temp
-# sensor_type: temperature_host # same as a temp_sensor
-# # sensor_mcu: mcu
-# min_temp: 0
-# max_temp: 100 # just the valid temperature ranges
-# target_temp: 40.0 # the initial target temperature for the fan
+[temperature_sensor chamber]
+sensor_type: EPCOS 100K B57560G104F
+sensor_pin: PF5
+
+#[temperature_fan system_fan]
+#pin: host:gpio18 # the fan control pin (must be a mosfet or a pwm fan)
+#control: watermark # the type of hysteresis we are using
+#max_delta: 3.0 # fan turns on/off at 3° over/under target_temp
+#sensor_type: temperature_host # same as a temp_sensor
+#sensor_mcu: mcu
+#min_temp: 0
+#max_temp: 100 # just the valid temperature ranges
+#target_temp: 40.0 # the initial target temperature for the fan
 
 #####################################################################
 # Probe, Bed, and Mesh
@@ -190,6 +195,7 @@ pin: !PG5
 x_offset: 35
 y_offset: 0
 #z_offset = 1
+speed: 7
 samples: 2
 samples_tolerance: .1
 samples_tolerance_retries: 1
@@ -210,7 +216,7 @@ max_temp: 130
       46, 110
       92, 110
       138, 110
-      180, 110
+      160, 110
   retries: 3
   retry_tolerance: .4
 
@@ -218,11 +224,11 @@ max_temp: 130
 speed: 120
 horizontal_move_z: 5
 mesh_min: 15, 10
-mesh_max: 210, 210
-probe_count: 10, 10
+mesh_max: 200, 210
+probe_count: 5, 5
 algorithm:bicubic
 fade_start: 1
-fade_end: 4
+fade_end: 0
 
 [bed_screws]
 screw1: 15, 15
@@ -233,9 +239,7 @@ screw4: 15, 205
 [homing_override]
 gcode:
   # Read requested homing axis
-  {% set requested = {'x': False,
-                      'y': False,
-                      'z': False} %}
+  {% set X, Y, Z = False, False, False %}
   {% if   not 'X' in params
       and not 'Y' in params 
       and not 'Z' in params %}
@@ -243,28 +247,28 @@ gcode:
   {% else %}
       {% if 'X' in params %}
           {% set X = True %}
-          {% set null = requested.update({'x': True}) %}
       {% endif %}       
       {% if 'Y' in params %}
           {% set Y = True %}
-          {% set null = requested.update({'y': True}) %}
       {% endif %}     
       {% if 'Z' in params %}
           {% set Z = True %}
-          {% set null = requested.update({'z': True}) %}
       {% endif %}        
   {% endif %}
+
+  # get center of bed
+  {% set x_wait = printer.toolhead.axis_maximum.x|float / 2 %}
+  {% set y_wait = printer.toolhead.axis_maximum.y|float / 2 %}
+
   SET_KINEMATIC_POSITION z=0
   g1 z5
-  # force_move stepper=stepper_z distance=5 velocity=50 ACCEL=10
-  # force_move stepper=stepper_z1 distance=5 velocity=50 ACCEL=10
 
   #preheat for z probe if homing z
   {% if Z %}
     {% if printer.extruder.target < 120 %}
-      set_heater_temperature heater=extruder target=120
+      set_heater_temperature heater=extruder target=150
     {% endif %}
-    set_heater_temperature heater=heater_bed target=60
+    # set_heater_temperature heater=heater_bed target=60
   {% endif %}
 
   G90
@@ -285,7 +289,7 @@ gcode:
 
   # Home Z
   {% if Z %}
-    G1 X{110- 30} Y{110} F3000
+    G1 X{x_wait} Y{y_wait} F3000
     TEMPERATURE_WAIT SENSOR=heater_bed minimum=55
     TEMPERATURE_WAIT SENSOR=extruder minimum=120
     G28 Z0
@@ -297,16 +301,16 @@ gcode:
 # Misc
 #####################################################################
 [filament_switch_sensor extruder1]
-  switch_pin: !PE10
+  switch_pin: !PE15
   
 
 [firmware_retraction]
-  retract_length: 2
-  retract_speed: 40
+  retract_length: 3 
+  retract_speed: 30
   unretract_speed: 30
 
-# [temperature_sensor pi_temp]
-#   sensor_type: temperature_host
+[temperature_sensor pi_temp]
+  sensor_type: temperature_host
 # https://pimylifeup.com/raspberry-pi-temperature/ if not currently working
 
 [pause_resume]
@@ -325,6 +329,7 @@ path: ~/printer_data/gcodes
 # [save_variables] # TODO
 # filename: ~/klipper_config/_saved_variables/variables.cfg
 
+[display_status]
 
 ########################################
 # EXP1 / EXP2 (display) pins
@@ -347,75 +352,37 @@ aliases:
 
 # See the sample-lcd.cfg file for definitions of common LCD displays.
 
-
-########################################
-# Display
-########################################
-
-# [display]
-#     # pinout for zonestar 5-button lcd2004
-#     #          EXP1:                   
-#     #   +-----------------+    
-#     #   |  5v D4 D5 D6 D7 |   
-#     #   | GND .  RS E Ana |   
-#     #   +------     ------+ 
-#   lcd_type: hd44780
-#   rs_pin: EXP1_6
-#   e_pin:  EXP1_4
-#   d4_pin: EXP1_7
-#   d5_pin: EXP1_5
-#   d6_pin: EXP1_3
-#   d7_pin: EXP1_1
-#   line_length: 20
-#   up_pin: EXP1_2
-#   down_pin: EXP1_2
-#   click_pin: EXP1_2
-#   back_pin: EXP1_2
-#   analog_range_up_pin: 9990,10050
-#   analog_range_down_pin: 990,1000
-#   analog_range_click_pin: 2150,4670
-#   analog_range_back_pin: 460, 480
-
-[display_status]
-
 #*# <---------------------- SAVE_CONFIG ---------------------->
 #*# DO NOT EDIT THIS BLOCK OR BELOW. The contents are auto-generated.
 #*#
 #*# [heater_bed]
 #*# control = pid
-#*# pid_kp = 69.747
-#*# pid_ki = 1.401
-#*# pid_kd = 868.350
+#*# pid_kp = 73.694
+#*# pid_ki = 0.805
+#*# pid_kd = 1685.750
+#*#
+#*# [probe]
+#*# z_offset = 1.210
+#*#
+#*# [extruder]
+#*# control = pid
+#*# pid_kp = 35.028
+#*# pid_ki = 1.930
+#*# pid_kd = 158.938
 #*#
 #*# [bed_mesh default]
 #*# version = 1
 #*# points =
-#*# 	-0.180313, -0.211875, -0.220625, -0.201875, -0.178281, -0.162969, -0.145000, -0.116094, -0.105156, -0.059219
-#*# 	-0.143906, -0.182969, -0.177344, -0.161094, -0.143750, -0.138750, -0.124844, -0.107500, -0.104063, -0.089531
-#*# 	-0.140469, -0.172344, -0.161719, -0.152500, -0.136719, -0.125469, -0.114531, -0.109375, -0.117031, -0.105313
-#*# 	-0.091875, -0.132188, -0.120000, -0.103281, -0.079531, -0.086406, -0.071250, -0.072031, -0.078125, -0.089844
-#*# 	-0.091250, -0.120000, -0.106719, -0.082969, -0.062500, -0.056094, -0.052969, -0.052500, -0.071563, -0.074844
-#*# 	-0.017500, -0.047813, -0.021094, -0.001094, 0.015000, 0.020781, 0.017969, 0.010781, -0.013281, -0.039844
-#*# 	-0.030625, -0.053281, -0.029531, -0.011563, 0.005469, 0.008594, 0.013125, 0.006719, -0.022188, -0.027656
-#*# 	-0.026563, -0.047969, -0.013125, 0.022031, 0.035469, 0.040937, 0.045937, 0.037500, 0.007187, -0.027813
-#*# 	-0.046719, -0.060625, -0.037344, -0.011406, 0.025312, 0.033906, 0.047969, 0.042344, 0.012031, -0.011406
-#*# 	-0.017188, -0.032344, 0.006406, 0.033125, 0.074062, 0.100625, 0.125156, 0.117812, 0.096719, 0.061250
-#*# x_count = 10
-#*# y_count = 10
+#*# 	  -0.094531, -0.089219, -0.087344
+#*# 	  -0.073750, -0.062656, -0.071406
+#*# 	  -0.068906, -0.070625, -0.067031
+#*# x_count = 3
+#*# y_count = 3
 #*# mesh_x_pps = 2
 #*# mesh_y_pps = 2
-#*# algo = bicubic
+#*# algo = lagrange
 #*# tension = 0.2
-#*# min_x = 15.0
-#*# max_x = 209.94
-#*# min_y = 10.0
-#*# max_y = 209.98
-#*#
-#*# [probe]
-#*# z_offset = 0.255
-#*#
-#*# [extruder]
-#*# control = pid
-#*# pid_kp = 31.527
-#*# pid_ki = 1.642
-#*# pid_kd = 151.330
+#*# min_x = 99.2
+#*# max_x = 120.78
+#*# min_y = 99.2
+#*# max_y = 120.78
