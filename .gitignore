@@ -1,0 +1,7 @@
+saved_variables.cfg
+adxl_results/belts/*.csv
+adxl_results/vibrations/*.tar.gz
+
+# internal backups
+printer-[0-9]*_[0-9]*.cfg
+mmu-[0-9]*_[0-9]*
